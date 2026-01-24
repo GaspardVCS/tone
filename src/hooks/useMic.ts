@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback } from 'react'
 import { DSP_CONFIG } from '../dsp/config'
 import { calcRms } from '../dsp/rms'
+import { detectPitch, PitchResult } from '../dsp/yin'
 
 export interface MicState {
   active: boolean
   rms: number
   voiced: boolean
+  pitch: PitchResult | null
 }
 
 export function useMic() {
@@ -13,6 +15,7 @@ export function useMic() {
     active: false,
     rms: 0,
     voiced: false,
+    pitch: null,
   })
 
   const ctxRef = useRef<AudioContext | null>(null)
@@ -40,11 +43,12 @@ export function useMic() {
       analyser.getFloatTimeDomainData(buffer)
       const rms = calcRms(buffer)
       const voiced = rms >= DSP_CONFIG.RMS_THRESHOLD
-      setState({ active: true, rms, voiced })
+      const pitch = voiced ? detectPitch(buffer, ctx.sampleRate) : null
+      setState({ active: true, rms, voiced, pitch })
       rafRef.current = requestAnimationFrame(loop)
     }
 
-    setState({ active: true, rms: 0, voiced: false })
+    setState({ active: true, rms: 0, voiced: false, pitch: null })
     rafRef.current = requestAnimationFrame(loop)
   }, [])
 
@@ -54,7 +58,7 @@ export function useMic() {
     ctxRef.current?.close()
     streamRef.current = null
     ctxRef.current = null
-    setState({ active: false, rms: 0, voiced: false })
+    setState({ active: false, rms: 0, voiced: false, pitch: null })
   }, [])
 
   return { ...state, start, stop }

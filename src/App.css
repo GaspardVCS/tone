@@ -56,3 +56,146 @@ nav {
   background: #666;
   color: #ccc;
 }
+
+.pitch-display {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  min-height: 1.75rem;
+}
+
+.pitch-hz {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.pitch-note {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #4caf50;
+}
+
+.pitch-cents {
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.pitch-confidence {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* Piano Keyboard */
+.piano-keyboard {
+  display: flex;
+  position: relative;
+  height: 120px;
+  max-width: 100%;
+  overflow-x: auto;
+  gap: 2px;
+  padding: 0.5rem;
+}
+
+.piano-key {
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  border-radius: 0 0 4px 4px;
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.piano-key-white {
+  width: 32px;
+  height: 100%;
+  background: #e8e8e8;
+  color: #333;
+}
+
+.piano-key-white:hover {
+  background: #d0d0ff;
+}
+
+.piano-key-black {
+  width: 22px;
+  height: 70%;
+  background: #333;
+  color: #aaa;
+  margin-left: -11px;
+  margin-right: -11px;
+  z-index: 1;
+}
+
+.piano-key-black:hover {
+  background: #555;
+}
+
+.piano-key-active {
+  background: #646cff !important;
+  color: #fff !important;
+}
+
+.piano-key-label {
+  font-size: 0.55rem;
+}
+
+/* Tuner Gauge */
+.tuner-gauge {
+  position: relative;
+  width: 80%;
+  max-width: 320px;
+  height: 32px;
+  background: #222;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tuner-gauge-inactive {
+  opacity: 0.5;
+}
+
+.tuner-gauge-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #888;
+  transform: translateX(-50%);
+}
+
+.tuner-gauge-needle {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 6px;
+  border-radius: 3px;
+  transform: translateX(-50%);
+  transition: left 0.08s linear;
+}
+
+.tuner-green {
+  background: #4caf50;
+}
+
+.tuner-yellow {
+  background: #ff9800;
+}
+
+.tuner-red {
+  background: #f44336;
+}
+
+.tuner-gauge-label {
+  position: absolute;
+  bottom: -1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: #aaa;
+  white-space: nowrap;
+}
