@@ -28,7 +28,7 @@ function TunerGauge({ cents }: Props) {
     <div className="tuner-gauge">
       <div className="tuner-gauge-center" />
       <div className={`tuner-gauge-needle ${color}`} style={{ left: `${pct}%` }} />
-      <div className="tuner-gauge-label">{direction}</div>
+      <div className="tuner-gauge-label">{direction} · {clamped >= 0 ? '+' : ''}{Math.round(clamped)}c</div>
     </div>
   )
 }
