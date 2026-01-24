@@ -11,4 +11,6 @@ export const DSP_CONFIG = {
   YIN_MIN_HZ: 60,
   /** Maximum detectable pitch in Hz */
   YIN_MAX_HZ: 1000,
+  /** Cents tolerance for "in tune" (±) */
+  TUNER_TOLERANCE_CENTS: 10,
 } as const

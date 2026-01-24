@@ -16,6 +16,11 @@ export function hzToCents(hz: number): number {
   return Math.round((midi - Math.round(midi)) * 100)
 }
 
+/** Cents offset from a specific target MIDI note */
+export function centsFromTarget(hz: number, targetMidi: number): number {
+  return (hzToMidi(hz) - targetMidi) * 100
+}
+
 /** Note name with octave (e.g. "A4", "C#5") */
 export function noteName(hz: number): string {
   const midi = Math.round(hzToMidi(hz))
