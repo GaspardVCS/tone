@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hzToMidi, midiToHz, hzToCents, noteName } from './notes'
+import { hzToMidi, midiToHz, hzToCents, centsFromTarget, noteName } from './notes'
 
 describe('hzToMidi', () => {
   it('A4 = 440 Hz → MIDI 69', () => {
@@ -38,6 +38,27 @@ describe('hzToCents', () => {
   it('slightly flat A4 → negative cents', () => {
     expect(hzToCents(435)).toBeLessThan(0)
     expect(hzToCents(435)).toBeGreaterThanOrEqual(-50)
+  })
+})
+
+describe('centsFromTarget', () => {
+  it('exact A4 (440 Hz) vs target MIDI 69 → 0 cents', () => {
+    expect(centsFromTarget(440, 69)).toBeCloseTo(0, 5)
+  })
+
+  it('one semitone above target → +100 cents', () => {
+    // A#4 = MIDI 70, target A4 = MIDI 69
+    const aSharp4 = 440 * Math.pow(2, 1 / 12)
+    expect(centsFromTarget(aSharp4, 69)).toBeCloseTo(100, 3)
+  })
+
+  it('slightly flat → negative cents', () => {
+    expect(centsFromTarget(435, 69)).toBeLessThan(0)
+    expect(centsFromTarget(435, 69)).toBeGreaterThan(-50)
+  })
+
+  it('one octave above target → +1200 cents', () => {
+    expect(centsFromTarget(880, 69)).toBeCloseTo(1200, 3)
   })
 })
 
