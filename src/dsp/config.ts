@@ -5,4 +5,10 @@ export const DSP_CONFIG = {
   FFT_SIZE: 2048,
   /** AnalyserNode smoothing time constant */
   ANALYSER_SMOOTHING: 0.8,
+  /** YIN cumulative mean normalized difference threshold */
+  YIN_THRESHOLD: 0.15,
+  /** Minimum detectable pitch in Hz */
+  YIN_MIN_HZ: 60,
+  /** Maximum detectable pitch in Hz */
+  YIN_MAX_HZ: 1000,
 } as const
