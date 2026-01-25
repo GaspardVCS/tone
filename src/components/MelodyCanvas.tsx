@@ -1,11 +1,13 @@
 import { useRef, useEffect } from 'react'
 import type { Melody } from '../data/melody'
+import { hzToMidi } from '../dsp/notes'
 
 interface Props {
   melody: Melody
   currentBeat: number
   beatsVisible: number
   onNoteHit?: (midi: number, noteIndex: number, durationBeats: number) => void
+  userPitch?: { hz: number; confidence: number; voiced: boolean } | null
 }
 
 const WIDTH = 400
@@ -29,7 +31,7 @@ function isBlackKey(midi: number): boolean {
   return [1, 3, 6, 8, 10].includes(note)
 }
 
-// Map MIDI to X center position on piano
+// Map MIDI to X center position on piano (integer MIDI)
 function midiToX(midi: number): number {
   // Count white keys from PIANO_LOW to this note
   let whiteKeyCount = 0
@@ -46,7 +48,22 @@ function midiToX(midi: number): number {
   }
 }
 
-function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit }: Props) {
+// Map fractional MIDI to X position (for smooth pitch tracking)
+function midiToXSmooth(midi: number): number {
+  const lower = Math.floor(midi)
+  const upper = Math.ceil(midi)
+  const fraction = midi - lower
+
+  if (lower === upper) {
+    return midiToX(lower)
+  }
+
+  const xLower = midiToX(lower)
+  const xUpper = midiToX(upper)
+  return xLower + (xUpper - xLower) * fraction
+}
+
+function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const prevBeatRef = useRef<number>(currentBeat)
 
@@ -136,6 +153,46 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit }: Props) {
       }
     }
 
+    // Draw user pitch marker (triangle pointer at top of piano) or out-of-range indicator
+    if (userPitch && userPitch.voiced && userPitch.confidence > 0.6) {
+      const midi = hzToMidi(userPitch.hz)
+
+      if (midi >= PIANO_LOW && midi <= PIANO_HIGH) {
+        // Normal marker - triangle at detected position
+        const x = pianoLeft + midiToXSmooth(midi)
+        // Draw downward-pointing triangle
+        ctx.fillStyle = '#4CAF50'
+        ctx.beginPath()
+        ctx.moveTo(x, nowY + 12)      // bottom point (into piano)
+        ctx.lineTo(x - 8, nowY - 4)   // top-left
+        ctx.lineTo(x + 8, nowY - 4)   // top-right
+        ctx.closePath()
+        ctx.fill()
+        // Add outline for visibility
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 2
+        ctx.stroke()
+      } else if (midi < PIANO_LOW) {
+        // Too low - show left arrow at piano left edge
+        ctx.fillStyle = '#FF9800'  // Orange
+        ctx.beginPath()
+        ctx.moveTo(pianoLeft - 5, nowY + 4)  // Arrow pointing left
+        ctx.lineTo(pianoLeft + 5, nowY - 4)
+        ctx.lineTo(pianoLeft + 5, nowY + 12)
+        ctx.closePath()
+        ctx.fill()
+      } else {
+        // Too high - show right arrow at piano right edge
+        ctx.fillStyle = '#FF9800'  // Orange
+        ctx.beginPath()
+        ctx.moveTo(pianoLeft + pianoWidth + 5, nowY + 4)  // Arrow pointing right
+        ctx.lineTo(pianoLeft + pianoWidth - 5, nowY - 4)
+        ctx.lineTo(pianoLeft + pianoWidth - 5, nowY + 12)
+        ctx.closePath()
+        ctx.fill()
+      }
+    }
+
     // Check for note hits (notes crossing the now line)
     if (onNoteHit) {
       const prevBeat = prevBeatRef.current
@@ -148,7 +205,7 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit }: Props) {
       }
     }
     prevBeatRef.current = currentBeat
-  }, [melody, currentBeat, beatsVisible, onNoteHit])
+  }, [melody, currentBeat, beatsVisible, onNoteHit, userPitch])
 
   return (
     <canvas
