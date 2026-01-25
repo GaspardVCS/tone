@@ -8,6 +8,7 @@ const HARMONICS_IMAG = new Float32Array([0, 0.6, 0.3, 0.15, 0.1])
 export function useOscillator() {
   const ctxRef = useRef<AudioContext | null>(null)
   const oscRef = useRef<OscillatorNode | null>(null)
+  const activeOscillatorsRef = useRef<OscillatorNode[]>([])
 
   const play = useCallback((midi: number) => {
     if (oscRef.current) {
@@ -75,7 +76,22 @@ export function useOscillator() {
 
     osc.start(now)
     osc.stop(now + durationSec + 0.01)
+
+    // Track this oscillator
+    activeOscillatorsRef.current.push(osc)
+
+    // Clean up when it ends naturally
+    osc.onended = () => {
+      activeOscillatorsRef.current = activeOscillatorsRef.current.filter(o => o !== osc)
+    }
   }, [])
 
-  return { play, playNote }
+  const stopAll = useCallback(() => {
+    activeOscillatorsRef.current.forEach(osc => {
+      try { osc.stop() } catch { /* already stopped */ }
+    })
+    activeOscillatorsRef.current = []
+  }, [])
+
+  return { play, playNote, stopAll }
 }
