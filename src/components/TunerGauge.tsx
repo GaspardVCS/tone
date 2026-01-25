@@ -10,7 +10,9 @@ function TunerGauge({ cents }: Props) {
   }
 
   const clamped = Math.max(-50, Math.min(50, cents))
-  const pct = ((clamped + 50) / 100) * 100
+  // Square-root mapping: expands center region, compresses extremes
+  const mapped = Math.sign(clamped) * Math.sqrt(Math.abs(clamped) / 50) * 50
+  const pct = ((mapped + 50) / 100) * 100
   const absCents = Math.abs(clamped)
   const tol = DSP_CONFIG.TUNER_TOLERANCE_CENTS
 
@@ -28,7 +30,7 @@ function TunerGauge({ cents }: Props) {
     <div className="tuner-gauge">
       <div className="tuner-gauge-center" />
       <div className={`tuner-gauge-needle ${color}`} style={{ left: `${pct}%` }} />
-      <div className="tuner-gauge-label">{direction}</div>
+      <div className="tuner-gauge-label">{direction} · {clamped >= 0 ? '+' : ''}{Math.round(clamped)}c</div>
     </div>
   )
 }

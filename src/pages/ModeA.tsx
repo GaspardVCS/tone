@@ -33,11 +33,11 @@ function ModeA() {
 
       <TunerGauge cents={cents} />
 
-      {active && pitch && (
-        <div className="pitch-display">
-          <span className="pitch-hz">{Math.round(pitch.hz)} Hz</span>
-          <span className="pitch-note">{noteName(pitch.hz)}</span>
-          <span className="pitch-confidence">confidence: {pitch.confidence.toFixed(2)}</span>
+      {active && (
+        <div className="pitch-display" style={{ visibility: pitch ? 'visible' : 'hidden' }}>
+          <span className="pitch-hz">{pitch ? Math.round(pitch.hz) : 0} Hz</span>
+          <span className="pitch-note">{pitch ? noteName(pitch.hz) : 'A4'}</span>
+          <span className="pitch-confidence">confidence: {pitch ? pitch.confidence.toFixed(2) : '0.00'}</span>
         </div>
       )}
 
