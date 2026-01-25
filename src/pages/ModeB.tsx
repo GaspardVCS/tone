@@ -1,34 +1,68 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import MelodyCanvas from '../components/MelodyCanvas'
 import { AU_CLAIR_DE_LA_LUNE, melodyDuration } from '../data/melody'
 import { useOscillator } from '../hooks/useOscillator'
+import { useMic } from '../hooks/useMic'
+import { hzToCents, noteName, midiToHz, hzToMidi } from '../dsp/notes'
 
 const BEATS_VISIBLE = 3
+const EMA_ALPHA = 0.3
+
+type PlaybackMode = 'demo' | 'practice'
 
 function ModeB() {
   const [bpm, setBpm] = useState(120)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('demo')
   const [currentBeat, setCurrentBeat] = useState(-2) // Start before first note
+  const [pitchDisplay, setPitchDisplay] = useState<{ note: string; cents: number } | null>(null)
 
   const animationRef = useRef<number>(0)
   const startTimeRef = useRef<number>(0)
   const startBeatRef = useRef<number>(0)
   const playedNotesRef = useRef<Set<number>>(new Set())
+  const smoothedMidiRef = useRef<number | null>(null)
 
   const { playNote, stopAll } = useOscillator()
+  const mic = useMic()
   const melody = AU_CLAIR_DE_LA_LUNE
   const totalBeats = melodyDuration(melody)
 
+  // Compute smoothed pitch for MelodyCanvas
+  const userPitch = useMemo(() => {
+    if (!mic.voiced || !mic.pitch || mic.pitch.confidence < 0.6) {
+      smoothedMidiRef.current = null
+      return null
+    }
+    const rawMidi = hzToMidi(mic.pitch.hz)
+    if (smoothedMidiRef.current === null) {
+      smoothedMidiRef.current = rawMidi
+    } else {
+      smoothedMidiRef.current = EMA_ALPHA * rawMidi + (1 - EMA_ALPHA) * smoothedMidiRef.current
+    }
+    return { hz: midiToHz(smoothedMidiRef.current), confidence: mic.pitch.confidence, voiced: true }
+  }, [mic.voiced, mic.pitch])
+
+  // Update pitch display
+  useEffect(() => {
+    if (mic.voiced && mic.pitch && mic.pitch.confidence >= 0.6) {
+      setPitchDisplay({ note: noteName(mic.pitch.hz), cents: hzToCents(mic.pitch.hz) })
+    } else {
+      setPitchDisplay(null)
+    }
+  }, [mic.voiced, mic.pitch])
+
   const handleNoteHit = useCallback(
     (midi: number, noteIndex: number, durationBeats: number) => {
+      if (playbackMode !== 'demo') return  // No sound in practice mode
       if (!playedNotesRef.current.has(noteIndex)) {
         playedNotesRef.current.add(noteIndex)
         const durationSec = (durationBeats * 60) / bpm
         playNote(midi, durationSec)
       }
     },
-    [playNote, bpm]
+    [playNote, bpm, playbackMode]
   )
 
   const animate = useCallback(
@@ -59,12 +93,18 @@ function ModeB() {
 
   const handleStart = () => {
     if (isPlaying) return
+    if (playbackMode === 'practice') {
+      mic.start()
+    }
     startTimeRef.current = 0
     setIsPlaying(true)
   }
 
   const handleStop = () => {
     if (!isPlaying) return
+    if (playbackMode === 'practice') {
+      mic.stop()
+    }
     cancelAnimationFrame(animationRef.current)
     stopAll()
     playedNotesRef.current.clear()
@@ -94,7 +134,16 @@ function ModeB() {
         currentBeat={currentBeat}
         beatsVisible={BEATS_VISIBLE}
         onNoteHit={handleNoteHit}
+        userPitch={playbackMode === 'practice' ? userPitch : null}
       />
+
+      {playbackMode === 'practice' && (
+        <p className="pitch-readout">
+          {pitchDisplay
+            ? `${pitchDisplay.note} ${pitchDisplay.cents >= 0 ? '+' : ''}${pitchDisplay.cents}¢`
+            : '\u00A0'}
+        </p>
+      )}
 
       <div className="melody-controls">
         <label className="bpm-label">
@@ -108,6 +157,23 @@ function ModeB() {
             className="bpm-slider"
           />
         </label>
+      </div>
+
+      <div className="melody-controls">
+        <button
+          onClick={() => setPlaybackMode('demo')}
+          className={`nav-link ${playbackMode === 'demo' ? 'active' : ''}`}
+          disabled={isPlaying}
+        >
+          Demo
+        </button>
+        <button
+          onClick={() => setPlaybackMode('practice')}
+          className={`nav-link ${playbackMode === 'practice' ? 'active' : ''}`}
+          disabled={isPlaying}
+        >
+          Practice
+        </button>
       </div>
 
       <div className="melody-controls">

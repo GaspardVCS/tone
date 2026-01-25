@@ -25,6 +25,16 @@ nav {
   background: #535bf2;
 }
 
+.nav-link.active {
+  background: #535bf2;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.nav-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .meter {
   width: 80%;
   max-width: 320px;
@@ -198,6 +208,15 @@ nav {
   font-size: 0.75rem;
   color: #aaa;
   white-space: nowrap;
+}
+
+/* Pitch Readout */
+.pitch-readout {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #4caf50;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
 }
 
 /* Melody Canvas */
