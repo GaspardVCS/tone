@@ -13,6 +13,30 @@ describe('hzToMidi', () => {
   it('A3 = 220 Hz → MIDI 57', () => {
     expect(hzToMidi(220)).toBeCloseTo(57, 5)
   })
+
+  // Edge cases for pitch detection range
+  it('C3 = 130.81 Hz → MIDI 48 (low boundary)', () => {
+    expect(hzToMidi(130.81)).toBeCloseTo(48, 0)
+  })
+
+  it('B4 = 493.88 Hz → MIDI 71 (high boundary)', () => {
+    expect(hzToMidi(493.88)).toBeCloseTo(71, 0)
+  })
+
+  it('very low frequency (sub-bass) returns fractional MIDI', () => {
+    expect(hzToMidi(30)).toBeLessThan(24)
+  })
+
+  it('very high frequency returns fractional MIDI', () => {
+    expect(hzToMidi(4000)).toBeGreaterThan(95)
+  })
+
+  it('fractional Hz returns fractional MIDI', () => {
+    // 445 Hz is slightly sharp of A4
+    const midi = hzToMidi(445)
+    expect(midi).toBeGreaterThan(69)
+    expect(midi).toBeLessThan(70)
+  })
 })
 
 describe('midiToHz', () => {
