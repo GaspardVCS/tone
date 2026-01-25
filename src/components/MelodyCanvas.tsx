@@ -9,6 +9,7 @@ interface Props {
   onNoteHit?: (midi: number, noteIndex: number, durationBeats: number) => void
   userPitch?: { hz: number; confidence: number; voiced: boolean } | null
   noteSegments?: Map<number, boolean[]>  // Per-segment match results
+  transpose?: number  // Semitones to shift melody (e.g., -12 = 1 octave down)
 }
 
 const SEGMENTS_PER_BEAT = 4  // Must match ModeB.tsx
@@ -21,9 +22,9 @@ const NOTE_COLOR_FAIL = '#FF6B6B'
 const NOW_LINE_COLOR = '#888'
 const BG_COLOR = '#1a1a2e'
 
-// Piano range: C3 (48) to B4 (71) = 2 octaves
-const PIANO_LOW = 48
-const PIANO_HIGH = 71
+// Piano range: 2 octaves, base starts at C3 (48)
+const PIANO_LOW_BASE = 48
+const PIANO_HIGH_BASE = 71
 
 // Piano keyboard dimensions
 const PIANO_HEIGHT = 60
@@ -38,10 +39,10 @@ function isBlackKey(midi: number): boolean {
 }
 
 // Map MIDI to X center position on piano (integer MIDI)
-function midiToX(midi: number): number {
-  // Count white keys from PIANO_LOW to this note
+function midiToX(midi: number, pianoLow: number): number {
+  // Count white keys from pianoLow to this note
   let whiteKeyCount = 0
-  for (let m = PIANO_LOW; m <= midi; m++) {
+  for (let m = pianoLow; m <= midi; m++) {
     if (!isBlackKey(m)) whiteKeyCount++
   }
 
@@ -55,21 +56,21 @@ function midiToX(midi: number): number {
 }
 
 // Map fractional MIDI to X position (for smooth pitch tracking)
-function midiToXSmooth(midi: number): number {
+function midiToXSmooth(midi: number, pianoLow: number): number {
   const lower = Math.floor(midi)
   const upper = Math.ceil(midi)
   const fraction = midi - lower
 
   if (lower === upper) {
-    return midiToX(lower)
+    return midiToX(lower, pianoLow)
   }
 
-  const xLower = midiToX(lower)
-  const xUpper = midiToX(upper)
+  const xLower = midiToX(lower, pianoLow)
+  const xUpper = midiToX(upper, pianoLow)
   return xLower + (xUpper - xLower) * fraction
 }
 
-function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch, noteSegments }: Props) {
+function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch, noteSegments, transpose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const prevBeatRef = useRef<number>(currentBeat)
 
@@ -83,9 +84,13 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch,
     ctx.fillStyle = BG_COLOR
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
 
+    // Compute shifted piano range based on transpose
+    const pianoLow = PIANO_LOW_BASE + (transpose ?? 0)
+    const pianoHigh = PIANO_HIGH_BASE + (transpose ?? 0)
+
     // Calculate piano dimensions
     let whiteKeyCount = 0
-    for (let m = PIANO_LOW; m <= PIANO_HIGH; m++) {
+    for (let m = pianoLow; m <= pianoHigh; m++) {
       if (!isBlackKey(m)) whiteKeyCount++
     }
     const pianoWidth = whiteKeyCount * WHITE_KEY_WIDTH
@@ -121,8 +126,8 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch,
       // Skip if completely off screen (above viewport or below canvas)
       if (y + noteHeight < 0 || y > HEIGHT) continue
 
-      // X position based on MIDI pitch
-      const x = pianoLeft + midiToX(note.midi) - noteWidth / 2
+      // X position based on MIDI pitch (with transpose applied)
+      const x = pianoLeft + midiToX(note.midi + (transpose ?? 0), pianoLow) - noteWidth / 2
 
       // Get segment data for this note
       const segments = noteSegments?.get(i)
@@ -172,7 +177,7 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch,
     // Draw piano keyboard
     // First draw all white keys
     let whiteIdx = 0
-    for (let m = PIANO_LOW; m <= PIANO_HIGH; m++) {
+    for (let m = pianoLow; m <= pianoHigh; m++) {
       if (!isBlackKey(m)) {
         const x = pianoLeft + whiteIdx * WHITE_KEY_WIDTH
         ctx.fillStyle = '#f0f0f0'
@@ -186,10 +191,10 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch,
 
     // Then draw black keys on top
     whiteIdx = 0
-    for (let m = PIANO_LOW; m <= PIANO_HIGH; m++) {
+    for (let m = pianoLow; m <= pianoHigh; m++) {
       if (!isBlackKey(m)) {
         // Check if next note is a black key
-        if (m + 1 <= PIANO_HIGH && isBlackKey(m + 1)) {
+        if (m + 1 <= pianoHigh && isBlackKey(m + 1)) {
           const x = pianoLeft + (whiteIdx + 1) * WHITE_KEY_WIDTH - BLACK_KEY_WIDTH / 2
           ctx.fillStyle = '#222'
           ctx.fillRect(x, nowY, BLACK_KEY_WIDTH, BLACK_KEY_HEIGHT)
@@ -202,9 +207,9 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch,
     if (userPitch && userPitch.voiced && userPitch.confidence > 0.6) {
       const midi = hzToMidi(userPitch.hz)
 
-      if (midi >= PIANO_LOW && midi <= PIANO_HIGH) {
+      if (midi >= pianoLow && midi <= pianoHigh) {
         // Normal marker - triangle at detected position
-        const x = pianoLeft + midiToXSmooth(midi)
+        const x = pianoLeft + midiToXSmooth(midi, pianoLow)
         // Draw downward-pointing triangle
         ctx.fillStyle = '#4CAF50'
         ctx.beginPath()
@@ -217,7 +222,7 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch,
         ctx.strokeStyle = '#fff'
         ctx.lineWidth = 2
         ctx.stroke()
-      } else if (midi < PIANO_LOW) {
+      } else if (midi < pianoLow) {
         // Too low - show left arrow at piano left edge
         ctx.fillStyle = '#FF9800'  // Orange
         ctx.beginPath()
@@ -250,7 +255,7 @@ function MelodyCanvas({ melody, currentBeat, beatsVisible, onNoteHit, userPitch,
       }
     }
     prevBeatRef.current = currentBeat
-  }, [melody, currentBeat, beatsVisible, onNoteHit, userPitch, noteSegments])
+  }, [melody, currentBeat, beatsVisible, onNoteHit, userPitch, noteSegments, transpose])
 
   return (
     <canvas

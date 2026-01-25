@@ -19,6 +19,7 @@ function ModeB() {
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('demo')
   const [currentBeat, setCurrentBeat] = useState(-2) // Start before first note
   const [pitchDisplay, setPitchDisplay] = useState<{ note: string; cents: number } | null>(null)
+  const [transpose, setTranspose] = useState(0) // Semitones
 
   const animationRef = useRef<number>(0)
   const startTimeRef = useRef<number>(0)
@@ -89,7 +90,7 @@ function ModeB() {
           // Check if user pitch matches the note
           let matched = false
           if (userPitch && userPitch.voiced && userPitch.confidence > 0.6) {
-            const cents = Math.abs(centsFromTarget(userPitch.hz, note.midi))
+            const cents = Math.abs(centsFromTarget(userPitch.hz, note.midi + transpose))
             matched = cents <= EVAL_CONFIG.toleranceCents
           }
           newSegments[s] = matched
@@ -99,7 +100,7 @@ function ModeB() {
         setNoteSegments(prev => new Map(prev).set(i, newSegments))
       }
     }
-  }, [isPlaying, playbackMode, currentBeat, melody.notes, userPitch, noteSegments])
+  }, [isPlaying, playbackMode, currentBeat, melody.notes, userPitch, noteSegments, transpose])
 
   const handleNoteHit = useCallback(
     (midi: number, noteIndex: number, durationBeats: number) => {
@@ -107,10 +108,10 @@ function ModeB() {
       if (!playedNotesRef.current.has(noteIndex)) {
         playedNotesRef.current.add(noteIndex)
         const durationSec = (durationBeats * 60) / bpm
-        playNote(midi, durationSec)
+        playNote(midi + transpose, durationSec)
       }
     },
-    [playNote, bpm, playbackMode]
+    [playNote, bpm, playbackMode, transpose]
   )
 
   const animate = useCallback(
@@ -190,6 +191,7 @@ function ModeB() {
         onNoteHit={handleNoteHit}
         userPitch={playbackMode === 'practice' ? userPitch : null}
         noteSegments={playbackMode === 'practice' ? noteSegments : undefined}
+        transpose={transpose}
       />
 
       {playbackMode === 'practice' && (
@@ -199,6 +201,16 @@ function ModeB() {
             : '\u00A0'}
         </p>
       )}
+
+      <div className="melody-controls">
+        <button onClick={() => setTranspose(t => t - 12)} disabled={isPlaying}>
+          -1 Oct
+        </button>
+        <span>Transpose: {transpose >= 0 ? '+' : ''}{transpose}</span>
+        <button onClick={() => setTranspose(t => t + 12)} disabled={isPlaying}>
+          +1 Oct
+        </button>
+      </div>
 
       <div className="melody-controls">
         <label className="bpm-label">
