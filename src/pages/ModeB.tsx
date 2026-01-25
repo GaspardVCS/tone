@@ -4,10 +4,12 @@ import MelodyCanvas from '../components/MelodyCanvas'
 import { AU_CLAIR_DE_LA_LUNE, melodyDuration } from '../data/melody'
 import { useOscillator } from '../hooks/useOscillator'
 import { useMic } from '../hooks/useMic'
-import { hzToCents, noteName, midiToHz, hzToMidi } from '../dsp/notes'
+import { hzToCents, noteName, midiToHz, hzToMidi, centsFromTarget } from '../dsp/notes'
+import { EVAL_CONFIG } from '../config/eval'
 
 const BEATS_VISIBLE = 3
 const EMA_ALPHA = 0.3
+const SEGMENTS_PER_BEAT = 4  // How many segments per beat for coloring
 
 type PlaybackMode = 'demo' | 'practice'
 
@@ -23,6 +25,8 @@ function ModeB() {
   const startBeatRef = useRef<number>(0)
   const playedNotesRef = useRef<Set<number>>(new Set())
   const smoothedMidiRef = useRef<number | null>(null)
+  const lastSegmentRef = useRef<Map<number, number>>(new Map())  // Track last evaluated segment per note
+  const [noteSegments, setNoteSegments] = useState<Map<number, boolean[]>>(new Map())
 
   const { playNote, stopAll } = useOscillator()
   const mic = useMic()
@@ -53,6 +57,50 @@ function ModeB() {
     }
   }, [mic.voiced, mic.pitch])
 
+  // Real-time segment evaluation (Practice mode only)
+  // As each segment of a note passes, check if user pitch matches
+  useEffect(() => {
+    if (!isPlaying || playbackMode !== 'practice') return
+
+    for (let i = 0; i < melody.notes.length; i++) {
+      const note = melody.notes[i]
+      const noteStart = note.startBeat
+
+      // Skip if we haven't reached this note yet
+      if (currentBeat < noteStart) continue
+
+      // Calculate total segments for this note
+      const totalSegments = Math.ceil(note.durationBeats * SEGMENTS_PER_BEAT)
+
+      // Calculate how many segments have passed
+      const beatsPassed = Math.min(currentBeat - noteStart, note.durationBeats)
+      const segmentsPassed = Math.floor(beatsPassed * SEGMENTS_PER_BEAT)
+
+      // Get last evaluated segment for this note
+      const lastSegment = lastSegmentRef.current.get(i) ?? -1
+
+      // Evaluate new segments
+      if (segmentsPassed > lastSegment) {
+        const currentSegments = noteSegments.get(i) ?? []
+        const newSegments = [...currentSegments]
+
+        // For each new segment, check if user is currently matching
+        for (let s = lastSegment + 1; s <= segmentsPassed && s < totalSegments; s++) {
+          // Check if user pitch matches the note
+          let matched = false
+          if (userPitch && userPitch.voiced && userPitch.confidence > 0.6) {
+            const cents = Math.abs(centsFromTarget(userPitch.hz, note.midi))
+            matched = cents <= EVAL_CONFIG.toleranceCents
+          }
+          newSegments[s] = matched
+        }
+
+        lastSegmentRef.current.set(i, segmentsPassed)
+        setNoteSegments(prev => new Map(prev).set(i, newSegments))
+      }
+    }
+  }, [isPlaying, playbackMode, currentBeat, melody.notes, userPitch, noteSegments])
+
   const handleNoteHit = useCallback(
     (midi: number, noteIndex: number, durationBeats: number) => {
       if (playbackMode !== 'demo') return  // No sound in practice mode
@@ -81,6 +129,8 @@ function ModeB() {
         startTimeRef.current = timestamp
         startBeatRef.current = -2
         playedNotesRef.current.clear()
+        lastSegmentRef.current.clear()
+        setNoteSegments(new Map())
         setCurrentBeat(-2)
       } else {
         setCurrentBeat(newBeat)
@@ -108,12 +158,16 @@ function ModeB() {
     cancelAnimationFrame(animationRef.current)
     stopAll()
     playedNotesRef.current.clear()
+    lastSegmentRef.current.clear()
+    setNoteSegments(new Map())
     setIsPlaying(false)
   }
 
   const handleReset = () => {
     handleStop()
     playedNotesRef.current.clear()
+    lastSegmentRef.current.clear()
+    setNoteSegments(new Map())
     setCurrentBeat(-2)
   }
 
@@ -135,6 +189,7 @@ function ModeB() {
         beatsVisible={BEATS_VISIBLE}
         onNoteHit={handleNoteHit}
         userPitch={playbackMode === 'practice' ? userPitch : null}
+        noteSegments={playbackMode === 'practice' ? noteSegments : undefined}
       />
 
       {playbackMode === 'practice' && (

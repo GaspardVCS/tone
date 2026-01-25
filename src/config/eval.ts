@@ -3,8 +3,8 @@
  * All thresholds are tunable here.
  */
 export const EVAL_CONFIG = {
-  /** Pitch tolerance in cents (±25 = half a quarter-tone) */
-  toleranceCents: 25,
+  /** Pitch tolerance in cents (±50 = nearest semitone wins) */
+  toleranceCents: 50,
 
   /** Minimum fraction of frames that must be voiced (0.35 = 35%) */
   minCoverage: 0.35,
