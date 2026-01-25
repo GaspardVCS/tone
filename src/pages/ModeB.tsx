@@ -2,20 +2,34 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import MelodyCanvas from '../components/MelodyCanvas'
 import { AU_CLAIR_DE_LA_LUNE, melodyDuration } from '../data/melody'
+import { useOscillator } from '../hooks/useOscillator'
 
-const BEATS_VISIBLE = 8
+const BEATS_VISIBLE = 3
 
 function ModeB() {
-  const [bpm, setBpm] = useState(100)
+  const [bpm, setBpm] = useState(120)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentBeat, setCurrentBeat] = useState(-2) // Start before first note
 
   const animationRef = useRef<number>(0)
   const startTimeRef = useRef<number>(0)
   const startBeatRef = useRef<number>(0)
+  const playedNotesRef = useRef<Set<number>>(new Set())
 
+  const { playNote } = useOscillator()
   const melody = AU_CLAIR_DE_LA_LUNE
   const totalBeats = melodyDuration(melody)
+
+  const handleNoteHit = useCallback(
+    (midi: number, noteIndex: number, durationBeats: number) => {
+      if (!playedNotesRef.current.has(noteIndex)) {
+        playedNotesRef.current.add(noteIndex)
+        const durationSec = (durationBeats * 60) / bpm
+        playNote(midi, durationSec)
+      }
+    },
+    [playNote, bpm]
+  )
 
   const animate = useCallback(
     (timestamp: number) => {
@@ -32,6 +46,7 @@ function ModeB() {
       if (newBeat > totalBeats + 2) {
         startTimeRef.current = timestamp
         startBeatRef.current = -2
+        playedNotesRef.current.clear()
         setCurrentBeat(-2)
       } else {
         setCurrentBeat(newBeat)
@@ -39,7 +54,7 @@ function ModeB() {
 
       animationRef.current = requestAnimationFrame(animate)
     },
-    [bpm, currentBeat, totalBeats]
+    [bpm, totalBeats]
   )
 
   const handleStart = () => {
@@ -56,12 +71,12 @@ function ModeB() {
 
   const handleReset = () => {
     handleStop()
+    playedNotesRef.current.clear()
     setCurrentBeat(-2)
   }
 
   useEffect(() => {
     if (isPlaying) {
-      startTimeRef.current = 0
       animationRef.current = requestAnimationFrame(animate)
     }
     return () => cancelAnimationFrame(animationRef.current)
@@ -76,6 +91,7 @@ function ModeB() {
         melody={melody}
         currentBeat={currentBeat}
         beatsVisible={BEATS_VISIBLE}
+        onNoteHit={handleNoteHit}
       />
 
       <div className="melody-controls">
