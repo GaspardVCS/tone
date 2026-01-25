@@ -198,3 +198,36 @@ nav {
   color: #aaa;
   white-space: nowrap;
 }
+
+/* Melody Canvas */
+.melody-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #aaa;
+  margin: 0;
+}
+
+.melody-canvas {
+  border: 2px solid #333;
+  border-radius: 8px;
+}
+
+.melody-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bpm-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.bpm-slider {
+  width: 200px;
+  cursor: pointer;
+}
