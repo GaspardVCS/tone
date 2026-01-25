@@ -42,5 +42,40 @@ export function useOscillator() {
     oscRef.current = osc
   }, [])
 
-  return { play }
+  const playNote = useCallback((midi: number, durationSec: number) => {
+    // Don't stop previous oscillator - allow notes to play their full duration
+    // Each note gets its own oscillator for proper polyphony
+
+    if (!ctxRef.current || ctxRef.current.state === 'closed') {
+      ctxRef.current = new AudioContext()
+    }
+    const ctx = ctxRef.current
+
+    // Resume if suspended (required for autoplay policy)
+    if (ctx.state === 'suspended') {
+      ctx.resume()
+    }
+
+    const now = ctx.currentTime
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    const wave = ctx.createPeriodicWave(HARMONICS_REAL, HARMONICS_IMAG)
+    osc.setPeriodicWave(wave)
+    osc.frequency.value = midiToHz(midi)
+
+    // Simple flat envelope for testing - constant volume for full duration
+    gain.gain.setValueAtTime(0.5, now)
+    gain.gain.setValueAtTime(0.5, now + durationSec - 0.01)
+    gain.gain.linearRampToValueAtTime(0, now + durationSec)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.start(now)
+    osc.stop(now + durationSec + 0.01)
+  }, [])
+
+  return { play, playNote }
 }
