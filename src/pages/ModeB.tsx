@@ -16,7 +16,7 @@ function ModeB() {
   const startBeatRef = useRef<number>(0)
   const playedNotesRef = useRef<Set<number>>(new Set())
 
-  const { playNote } = useOscillator()
+  const { playNote, stopAll } = useOscillator()
   const melody = AU_CLAIR_DE_LA_LUNE
   const totalBeats = melodyDuration(melody)
 
@@ -66,6 +66,8 @@ function ModeB() {
   const handleStop = () => {
     if (!isPlaying) return
     cancelAnimationFrame(animationRef.current)
+    stopAll()
+    playedNotesRef.current.clear()
     setIsPlaying(false)
   }
 
