@@ -10,6 +10,7 @@ function ModeA() {
   const { active, pitch, start, stop } = useMic()
   const { play } = useOscillator()
   const [targetMidi, setTargetMidi] = useState<number | null>(null)
+  const [transpose, setTranspose] = useState(0)
 
   const handleKeyClick = (midi: number) => {
     setTargetMidi(midi)
@@ -37,11 +38,21 @@ function ModeA() {
         <div className="pitch-display" style={{ visibility: pitch ? 'visible' : 'hidden' }}>
           <span className="pitch-hz">{pitch ? Math.round(pitch.hz) : 0} Hz</span>
           <span className="pitch-note">{pitch ? noteName(pitch.hz) : 'A4'}</span>
-          <span className="pitch-confidence">confidence: {pitch ? pitch.confidence.toFixed(2) : '0.00'}</span>
         </div>
       )}
 
-      <PianoKeyboard onKeyClick={handleKeyClick} targetMidi={targetMidi} />
+      <div className="melody-controls">
+        <button onClick={() => setTranspose(t => t - 12)}>-1 Oct</button>
+        <span>Transpose: {transpose >= 0 ? '+' : ''}{transpose}</span>
+        <button onClick={() => setTranspose(t => t + 12)}>+1 Oct</button>
+      </div>
+
+      <PianoKeyboard
+        onKeyClick={handleKeyClick}
+        targetMidi={targetMidi}
+        userPitch={active && pitch ? pitch : null}
+        transpose={transpose}
+      />
 
       <Link to="/" className="nav-link">Back</Link>
     </div>

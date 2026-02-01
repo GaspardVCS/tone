@@ -153,6 +153,44 @@ nav {
   font-size: 0.55rem;
 }
 
+/* Pitch Pointer (for piano keyboard) */
+.pitch-pointer {
+  position: absolute;
+  top: -8px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 12px solid #4CAF50;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.pitch-pointer-arrow {
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: translateY(-50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.pitch-pointer-arrow-left {
+  left: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 12px solid #FF9800;
+}
+
+.pitch-pointer-arrow-right {
+  right: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 12px solid #FF9800;
+}
+
 /* Tuner Gauge */
 .tuner-gauge {
   position: relative;
