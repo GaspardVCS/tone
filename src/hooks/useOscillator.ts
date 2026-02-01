@@ -5,6 +5,15 @@ import { midiToHz } from '../dsp/notes'
 const HARMONICS_REAL = new Float32Array([0, 0, 0, 0, 0])
 const HARMONICS_IMAG = new Float32Array([0, 0.6, 0.3, 0.15, 0.1])
 
+// Equal-loudness compensation (simplified approximation of Fletcher-Munson curves)
+// Reference: 440 Hz (A4) = multiplier 1.0
+// Lower frequencies get boosted, higher get slightly reduced
+function loudnessCompensation(hz: number): number {
+  const refHz = 440
+  const compensation = Math.pow(refHz / hz, 0.25)
+  return Math.max(0.5, Math.min(2.0, compensation))
+}
+
 export function useOscillator() {
   const ctxRef = useRef<AudioContext | null>(null)
   const oscRef = useRef<OscillatorNode | null>(null)
@@ -25,13 +34,16 @@ export function useOscillator() {
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
 
+    const hz = midiToHz(midi)
     const wave = ctx.createPeriodicWave(HARMONICS_REAL, HARMONICS_IMAG)
     osc.setPeriodicWave(wave)
-    osc.frequency.value = midiToHz(midi)
+    osc.frequency.value = hz
 
     // Envelope: 10ms attack, exponential decay (time constant ~0.33s)
+    // Apply loudness compensation for perceptually even volume
+    const compensatedGain = 0.5 * loudnessCompensation(hz)
     gain.gain.setValueAtTime(0, now)
-    gain.gain.linearRampToValueAtTime(0.5, now + 0.01)
+    gain.gain.linearRampToValueAtTime(compensatedGain, now + 0.01)
     gain.gain.setTargetAtTime(0, now + 0.01, 0.33)
 
     osc.connect(gain)
@@ -62,13 +74,15 @@ export function useOscillator() {
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
 
+    const hz = midiToHz(midi)
     const wave = ctx.createPeriodicWave(HARMONICS_REAL, HARMONICS_IMAG)
     osc.setPeriodicWave(wave)
-    osc.frequency.value = midiToHz(midi)
+    osc.frequency.value = hz
 
-    // Simple flat envelope for testing - constant volume for full duration
-    gain.gain.setValueAtTime(0.5, now)
-    gain.gain.setValueAtTime(0.5, now + durationSec - 0.01)
+    // Flat envelope with loudness compensation for perceptually even volume
+    const compensatedGain = 0.5 * loudnessCompensation(hz)
+    gain.gain.setValueAtTime(compensatedGain, now)
+    gain.gain.setValueAtTime(compensatedGain, now + durationSec - 0.01)
     gain.gain.linearRampToValueAtTime(0, now + durationSec)
 
     osc.connect(gain)
