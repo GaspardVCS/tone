@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Tone</title>
+    <script>
+      // Redirect to index with the path as a query param
+      const path = window.location.pathname.replace('/tone', '')
+      window.location.replace('/tone/?p=' + encodeURIComponent(path))
+    </script>
+  </head>
+  <body></body>
+</html>

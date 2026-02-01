@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1a1a2e" />
     <title>Tone — Ear Training</title>
+    <script>
+      // Handle SPA redirect from 404.html
+      (function() {
+        const params = new URLSearchParams(window.location.search)
+        const path = params.get('p')
+        if (path) {
+          window.history.replaceState(null, '', '/tone' + path)
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
